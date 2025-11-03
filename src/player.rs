@@ -1,13 +1,13 @@
-use crate::swiss::ScoreConfig; 
+use crate::swiss::{ScoreConfig, Outcome}; 
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Player {
     name: String,
     wins: u8,
     losses: u8,
     ties: u8,
     player_number: u16,
-    opponents: Vec<u16>,
+    opponents: Vec<(u16, Outcome)>,
 }
 
 impl Player {
@@ -50,7 +50,7 @@ impl Player {
         self.player_number
     }
 
-    pub fn get_last_opponent(&self) -> u16 {
-        *self.opponents.last().unwrap()
+    pub fn get_last_opponent(&self) -> Option<(u16, Outcome)> {
+        self.opponents.last().copied()
     }
 }
