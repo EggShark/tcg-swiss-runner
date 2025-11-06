@@ -19,7 +19,23 @@ fn main() {
 
     let mut players = vec![p1, p2, p3, p4];
 
-    let parings = generate_pairings(&mut players, scoring);
+    let mut parings = generate_pairings(&mut players, scoring);
+    
+    for p_match in &mut parings {
+        p_match.p1_wins();
+    }
 
-    println!("{:?}", parings);
+    let mut players = parings.into_iter().flat_map(|e| {
+        let (p1, p2) = e.extract_players();
+        [Some(p1), p2]
+    }).flatten()
+    .collect::<Vec<Player>>();
+
+
+    println!("Generating round 2 pairings");
+    let mut r2 = generate_pairings(&mut players, scoring);
+    for p in r2 {
+        p.pretty_print();
+    }
+
 }   

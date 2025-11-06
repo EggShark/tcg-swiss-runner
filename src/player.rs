@@ -30,20 +30,16 @@ impl Player {
         (self.wins, self.losses, self.ties)
     }
 
-    pub fn mark_loss(&mut self) {
-        self.losses += 1;
-    }
-
-    pub fn mark_win(&mut self) {
-        self.wins += 1;
-    }
-
-    pub fn mark_tie(&mut self) {
-        self.ties += 1;
+    pub fn mark_result(&mut self, outcome: Outcome) {
+        match outcome {
+            Outcome::Win => self.wins += 1,
+            Outcome::Loss => self.losses += 1,
+            Outcome::Tie => self.ties += 1,
+        }
     }
 
     pub fn caluculate_match_points(&self, score_config: ScoreConfig) -> u8 {
-        self.wins * score_config.win + self.losses * score_config.loss + self.ties * score_config.tie
+        (self.wins * score_config.win) + (self.losses * score_config.loss) + (self.ties * score_config.tie)
     }
 
     pub fn get_number(&self) -> u16 {
@@ -52,5 +48,13 @@ impl Player {
 
     pub fn get_last_opponent(&self) -> Option<(u16, Outcome)> {
         self.opponents.last().copied()
+    }
+
+    pub fn get_name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn add_opponent(&mut self, op_number: u16, outcome: Outcome) {
+        self.opponents.push((op_number, outcome));
     }
 }

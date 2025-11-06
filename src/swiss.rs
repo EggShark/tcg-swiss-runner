@@ -11,6 +11,17 @@ pub enum Outcome {
     Tie
 }
 
+impl std::ops::Not for Outcome {
+    type Output = Self;
+    fn not(self) -> Self::Output {
+        match self {
+            Self::Win => Self::Loss,
+            Self::Loss => Self::Win,
+            Self::Tie => Self::Tie,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Pairing {
     p1: Player,
@@ -36,29 +47,30 @@ impl Pairing {
     }
 
     pub fn extract_players(mut self) -> (Player, Option<Player>) {
-        match self.winner {
-            Some(Outcome::Win) => {
-                self.p1.mark_win();
-                if let Some(p2) = &mut self.p2 {
-                    p2.mark_win();
-                }
-            },
-            Some(Outcome::Loss) => {
-                if let Some(p2) = &mut self.p2 {
-                    self.p1.mark_loss();
-                    p2.mark_win();
-                }
-            },
-            Some(Outcome::Tie) => {
-                self.p1.mark_tie();
-                if let Some(p2) = &mut self.p2 {
-                    p2.mark_tie();
-                }
-            },
-            None => {},
-        };
+        if self.winner.is_none() {
+            return (self.p1, self.p2);
+        }
+
+        self.p1.mark_result(self.winner.unwrap());
+        if let Some(p2) = &mut self.p2 {
+            self.p1.add_opponent(p2.get_number(), self.winner.unwrap());
+            p2.mark_result(!self.winner.unwrap());
+            p2.add_opponent(self.p1.get_number(), !self.winner.unwrap());
+        }
 
         (self.p1, self.p2)
+    }
+
+    pub fn pretty_print(&self) {
+        let (p1_w, p1_l, p1_t) = self.p1.extract_record();
+        print!("{} ({}/{}/{})", self.p1.get_name(), p1_w, p1_l, p1_t);
+
+        if let Some(p2) = &self.p2 {
+            let (p2_w, p2_l, p2_t) = p2.extract_record();
+            println!(" vs {}, ({}/{}/{})", p2.get_name(), p2_w, p2_l, p2_t);
+        } else {
+            println!("Got a Bye")
+        }
     }
 }
 
@@ -77,7 +89,7 @@ pub fn generate_pairings(players: &mut Vec<Player>, scoring: ScoreConfig) -> Vec
     while let Some(player) = players.pop() {
         let match_points = player.caluculate_match_points(scoring);
         max_mp = std::cmp::max(match_points, max_mp);
-        let e = map.entry(max_mp).or_default();
+        let e = map.entry(match_points).or_default();
         e.push(player)
     }
     
@@ -95,6 +107,7 @@ pub fn generate_pairings(players: &mut Vec<Player>, scoring: ScoreConfig) -> Vec
                 }
             },
         };
+
         
         let mut rng = rand::rng();
         players.shuffle(&mut rng);
@@ -134,6 +147,7 @@ pub fn generate_pairings(players: &mut Vec<Player>, scoring: ScoreConfig) -> Vec
         }
     }
 
+    // will happen in the case that only 2 players on round 3
     assert_eq!(left_overs[1], None);
 
     // assign bye
