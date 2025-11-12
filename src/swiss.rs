@@ -38,6 +38,10 @@ impl Pairing {
         }
     }
 
+    pub fn players_tie(&mut self) {
+        self.winner = Some(Outcome::Tie)
+    }
+
     pub fn p1_wins(&mut self) {
         self.winner = Some(Outcome::Win);
     }
@@ -71,6 +75,10 @@ impl Pairing {
         } else {
             println!("Got a Bye")
         }
+    }
+
+    fn get_players(&self) -> (&Player, Option<&Player>) {
+        (&self.p1, self.p2.as_ref())
     }
 }
 
@@ -158,3 +166,107 @@ pub fn generate_pairings(players: &mut Vec<Player>, scoring: ScoreConfig) -> Vec
     pairings
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const SCORES: ScoreConfig = ScoreConfig{
+        win: 3,
+        tie: 1,
+        loss: 0,
+    };
+
+    fn generate_players(number: u16) -> Vec<Player> {
+        (1..number+1).map(|num| Player::new(num.to_string(), num)).collect()
+    }
+
+    #[test]
+    fn four_player_all_tie() {
+       let mut players = generate_players(4);
+
+       let mut matches = generate_pairings(&mut players, SCORES);
+       for pair in &mut matches {
+           pair.players_tie();
+       }
+       
+       let mut players = matches.into_iter()
+           .flat_map(|e| {
+               let (p1, p2) = e.extract_players();
+               [Some(p1), p2]
+           })
+       .flatten()
+       .collect::<Vec<Player>>();
+
+       assert!(players.iter().all(|p| p.caluculate_match_points(SCORES)==1));
+
+       matches = generate_pairings(&mut players, SCORES);
+       assert_eq!(2, matches.len());
+    }
+
+    #[test]
+    fn four_players_one_down_pair() {
+        let mut players = generate_players(4);
+        let mut matches = generate_pairings(&mut players, SCORES);
+
+        matches[0].p1_wins();
+        matches[1].players_tie();
+
+        let mut players = matches.into_iter()
+           .flat_map(|e| {
+               let (p1, p2) = e.extract_players();
+               [Some(p1), p2]
+           })
+       .flatten()
+       .collect::<Vec<Player>>();
+
+       matches = generate_pairings(&mut players, SCORES);
+       let (p1, p2) = matches[0].get_players();
+       assert_eq!(p1.caluculate_match_points(SCORES), 3);
+       assert_eq!(p2.unwrap().caluculate_match_points(SCORES), 1);
+
+       let (p1, p2) = matches[1].get_players();
+       assert_eq!(p1.caluculate_match_points(SCORES), 1);
+       assert_eq!(p2.unwrap().caluculate_match_points(SCORES), 0);
+    }
+
+    #[test]
+    #[should_panic]
+    fn two_players_round_2() {
+        let mut players = generate_players(2);
+        let mut matches = generate_pairings(&mut players, SCORES);
+        matches[0].p1_wins();
+
+        let mut players = matches.into_iter()
+           .flat_map(|e| {
+               let (p1, p2) = e.extract_players();
+               [Some(p1), p2]
+           })
+       .flatten()
+       .collect::<Vec<Player>>();
+
+       let _matches = generate_pairings(&mut players, SCORES);
+    }
+
+
+    #[test]
+    fn stress_test() {
+        let mut players = generate_players(64);
+        for _ in 0..12 {
+            let mut matches = generate_pairings(&mut players, SCORES);
+            for m in &mut matches[1..] {
+                m.p1_wins();
+            }
+
+            // throw some chaos in there !
+            matches[0].players_tie();
+
+            players = matches.into_iter()
+                .flat_map(|e| {
+                    let (p1, p2) = e.extract_players();
+                    [Some(p1), p2]
+                })
+            .flatten()
+            .collect::<Vec<Player>>();
+        }
+    }
+}
