@@ -25,11 +25,12 @@ fn main() {
         p_match.p1_wins();
     }
 
-    let mut players = parings.into_iter().flat_map(|e| {
-        let (p1, p2) = e.extract_players();
-        [Some(p1), p2]
-    }).flatten()
-    .collect::<Vec<Player>>();
+    let mut players = parings.into_iter()
+        .flat_map(|e| {
+            let (p1, p2) = e.extract_players();
+            [Some(p1), p2]
+        }).flatten()
+        .collect::<Vec<Player>>();
 
 
     println!("Generating round 2 pairings");

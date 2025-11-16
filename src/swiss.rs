@@ -4,6 +4,8 @@ use rand::seq::SliceRandom;
 
 use crate::player::Player;
 
+const BYE_PLAYER_NUMBER: u16 = 0;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Outcome {
     Win,
@@ -60,6 +62,8 @@ impl Pairing {
             self.p1.add_opponent(p2.get_number(), self.winner.unwrap());
             p2.mark_result(!self.winner.unwrap());
             p2.add_opponent(self.p1.get_number(), !self.winner.unwrap());
+        } else {
+            self.p1.add_opponent(BYE_PLAYER_NUMBER, self.winner.unwrap());
         }
 
         (self.p1, self.p2)
@@ -197,7 +201,7 @@ mod tests {
        .flatten()
        .collect::<Vec<Player>>();
 
-       assert!(players.iter().all(|p| p.caluculate_match_points(SCORES)==1));
+       assert!(players.iter().all(|p| p.extract_record()==(0,0,1)));
 
        matches = generate_pairings(&mut players, SCORES);
        assert_eq!(2, matches.len());
@@ -221,12 +225,12 @@ mod tests {
 
        matches = generate_pairings(&mut players, SCORES);
        let (p1, p2) = matches[0].get_players();
-       assert_eq!(p1.caluculate_match_points(SCORES), 3);
-       assert_eq!(p2.unwrap().caluculate_match_points(SCORES), 1);
+       assert_eq!(p1.extract_record(), (1,0,0));
+       assert_eq!(p2.unwrap().extract_record(), (0,0,1));
 
        let (p1, p2) = matches[1].get_players();
-       assert_eq!(p1.caluculate_match_points(SCORES), 1);
-       assert_eq!(p2.unwrap().caluculate_match_points(SCORES), 0);
+       assert_eq!(p1.extract_record(), (0,0,1));
+       assert_eq!(p2.unwrap().extract_record(), (0,1,0));
     }
 
     #[test]
@@ -268,5 +272,12 @@ mod tests {
             .flatten()
             .collect::<Vec<Player>>();
         }
+    }
+
+    #[test]
+    fn not_test() {
+        assert_eq!(!Outcome::Win, Outcome::Loss);
+        assert_eq!(!Outcome::Loss, Outcome::Win);
+        assert_eq!(!Outcome::Tie, Outcome::Tie)
     }
 }
