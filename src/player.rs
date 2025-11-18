@@ -50,6 +50,10 @@ impl Player {
         self.opponents.last().copied()
     }
 
+    pub fn get_matches(&self) -> &[(u16, Outcome)] {
+        &self.opponents
+    }
+
     pub fn get_name(&self) -> &str {
         &self.name
     }

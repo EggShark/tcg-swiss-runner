@@ -7,6 +7,7 @@ use crate::player::Player;
 const BYE_PLAYER_NUMBER: u16 = 0;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u8)]
 pub enum Outcome {
     Win,
     Loss,

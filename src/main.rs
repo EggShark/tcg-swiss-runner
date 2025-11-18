@@ -4,6 +4,7 @@ use crate::swiss::{generate_pairings, ScoreConfig};
 
 mod player;
 mod swiss;
+mod tournament;
 
 fn main() {
     let p1 = Player::new("Bob".to_string(), 1);
