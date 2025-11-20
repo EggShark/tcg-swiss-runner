@@ -22,6 +22,17 @@ impl Player {
         }
     }
 
+    pub fn from_information(name: String, player_number: u16, score: (u8,u8,u8), opponents: Vec<(u16, Outcome)>) -> Self {
+        Self {
+            name,
+            player_number,
+            wins: score.0,
+            losses: score.1,
+            ties: score.2,
+            opponents,
+        }
+    }
+
     pub fn calculate_winrate(&self) -> f32 {
         self.wins as f32 / (self.wins + self.losses) as f32
     }
