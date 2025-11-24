@@ -33,7 +33,7 @@ pub struct Pairing {
 }
 
 impl Pairing {
-    pub fn new(p1: Player, p2: Option<Player>) -> Self {
+    pub const fn new(p1: Player, p2: Option<Player>) -> Self {
         Self {
             p1,
             p2,
@@ -41,17 +41,9 @@ impl Pairing {
         }
     }
 
-    pub fn players_tie(&mut self) {
-        self.winner = Some(Outcome::Tie)
-    }
-
-    pub fn p1_wins(&mut self) {
-        self.winner = Some(Outcome::Win);
-    }
-
-    pub fn p2_wins(&mut self) {
-        self.winner = Some(Outcome::Loss);
-    }
+    pub fn give_outcome(&mut self, outcome: Outcome) {
+        self.winner = Some(outcome);
+    } 
 
     pub fn extract_players(mut self) -> (Player, Option<Player>) {
         if self.winner.is_none() {
@@ -191,7 +183,7 @@ mod tests {
 
        let mut matches = generate_pairings(&mut players, SCORES);
        for pair in &mut matches {
-           pair.players_tie();
+           pair.give_outcome(Outcome::Tie);
        }
        
        let mut players = matches.into_iter()
@@ -213,8 +205,8 @@ mod tests {
         let mut players = generate_players(4);
         let mut matches = generate_pairings(&mut players, SCORES);
 
-        matches[0].p1_wins();
-        matches[1].players_tie();
+        matches[0].give_outcome(Outcome::Win);
+        matches[1].give_outcome(Outcome::Tie);
 
         let mut players = matches.into_iter()
            .flat_map(|e| {
@@ -239,7 +231,7 @@ mod tests {
     fn two_players_round_2() {
         let mut players = generate_players(2);
         let mut matches = generate_pairings(&mut players, SCORES);
-        matches[0].p1_wins();
+        matches[0].give_outcome(Outcome::Win);
 
         let mut players = matches.into_iter()
            .flat_map(|e| {
@@ -259,11 +251,11 @@ mod tests {
         for _ in 0..12 {
             let mut matches = generate_pairings(&mut players, SCORES);
             for m in &mut matches[1..] {
-                m.p1_wins();
+                m.give_outcome(Outcome::Win);
             }
 
             // throw some chaos in there !
-            matches[0].players_tie();
+            matches[0].give_outcome(Outcome::Tie);
 
             players = matches.into_iter()
                 .flat_map(|e| {
