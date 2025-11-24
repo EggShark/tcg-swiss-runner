@@ -1,8 +1,12 @@
+use std::fmt::Display;
 use std::fs::File;
 use std::path::Path;
 use std::io::{BufRead, BufReader, BufWriter, Read, Write};
+use std::error::Error;
 
-use crate::swiss::Outcome;
+
+use crate::swiss::{generate_pairings, Outcome};
+use crate::SCORING;
 use crate::{player::Player, swiss::Pairing};
 
 pub struct Tournament {
@@ -20,6 +24,48 @@ impl Tournament {
             pairings: Vec::new(),
             name,
         }
+    }
+
+    pub fn start_round(&mut self) -> Result<(), TournamentError> {
+        if self.players.is_empty() {
+            return Err(TournamentError::RoundAlreadyStarted);
+        }
+
+        self.pairings = generate_pairings(&mut self.players, SCORING);
+
+        Ok(())
+    }
+
+    pub fn report_match(&mut self, match_idx: usize, outcome: Outcome) -> Result<(), TournamentError> {
+        if self.pairings.is_empty() {
+            return Err(TournamentError::RoundNotImprogress);
+        }
+
+        if match_idx >= self.pairings.len() {
+            return Err(TournamentError::InvalidMatchIndex(match_idx));
+        }
+
+        self.pairings[match_idx].give_outcome(outcome);
+
+        Ok(())
+    }
+
+    pub fn finilze_round(&mut self) -> Result<(), TournamentError> {
+        if !self.pairings.iter().all(|p| p.is_delcared()) {
+            return Err(TournamentError::GamesNotFinished);
+        }
+
+        self.players = self.pairings
+            .drain(..)
+            .flat_map(|e| {
+                let (p1, p2) = e.extract_players();
+                [Some(p1), p2]
+            })
+            .flatten()
+            .collect::<Vec<Player>>();
+
+
+        Ok(())
     }
 
     pub fn write_to_file<P: AsRef<Path>>(&self, out_file: P) -> std::io::Result<()>{
@@ -124,6 +170,28 @@ impl Tournament {
     }
 }
 
+#[derive(Debug)]
+pub enum TournamentError {
+    RoundAlreadyStarted,
+    RoundNotImprogress,
+    InvalidMatchIndex(usize),
+    GamesNotFinished,
+}
+
+impl Display for TournamentError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::RoundAlreadyStarted => write!(f, "Attempt to start round when round has already been started"),
+            Self::RoundNotImprogress => write!(f, "Attempted to do an opperation that needs a round in progress"),
+            Self::InvalidMatchIndex(idx) => write!(f, "Given index of {} is out of bounds", idx),
+            Self::GamesNotFinished => write!(f, "Attempted to end tournament with rounds still in progress"),
+        }
+    }
+}
+
+impl Error for TournamentError {}
+
+#[derive(Debug)]
 pub enum TournamentIOError {
     Io(std::io::Error),
     MissingNewLineSeperator(usize),
@@ -134,5 +202,32 @@ pub enum TournamentIOError {
 impl From<std::io::Error> for TournamentIOError {
     fn from(value: std::io::Error) -> Self {
         Self::Io(value)
+    }
+}
+
+impl Display for TournamentIOError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Io(e) => write!(f, "{}", e),
+            Self::MissingNewLineSeperator(pos) => write!(f, "expected newline at byte position: {}", pos),
+            Self::PlayerHasTooManyRounds(expected, found) => write!(f, "player has played {} rounds expected {}", found, expected),
+            Self::InvalidResultFound(err_res) => write!(f, "found {} in result value should be 0,1,2", err_res),
+        }
+    }
+}
+
+impl Error for TournamentIOError {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn generate_players(number: u16) -> Vec<Player> {
+        (1..number+1).map(|num| Player::new(num.to_string(), num)).collect()
+    }
+
+    #[test]
+    fn two_plus_two() {
+        assert_eq!(2+2,4);
     }
 }

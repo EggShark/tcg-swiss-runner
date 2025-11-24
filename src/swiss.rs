@@ -43,7 +43,11 @@ impl Pairing {
 
     pub fn give_outcome(&mut self, outcome: Outcome) {
         self.winner = Some(outcome);
-    } 
+    }
+
+    pub fn is_delcared(&self) -> bool {
+        self.winner.is_some()
+    }
 
     pub fn extract_players(mut self) -> (Player, Option<Player>) {
         if self.winner.is_none() {
