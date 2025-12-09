@@ -25,7 +25,7 @@ impl std::ops::Not for Outcome {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Pairing {
     p1: Player,
     p2: Option<Player>,

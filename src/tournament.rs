@@ -1,7 +1,7 @@
 use std::fmt::Display;
 use std::fs::File;
 use std::path::Path;
-use std::io::{BufRead, BufReader, BufWriter, Read, Write};
+use std::io::{self, BufRead, BufReader, BufWriter, Read, Write};
 use std::error::Error;
 
 
@@ -9,6 +9,7 @@ use crate::swiss::{generate_pairings, Outcome};
 use crate::SCORING;
 use crate::{player::Player, swiss::Pairing};
 
+#[derive(Debug, PartialEq)]
 pub struct Tournament {
     round_number: u16,
     players: Vec<Player>,
@@ -107,7 +108,9 @@ impl Tournament {
         let mut reader = BufReader::new(file);
         
         let mut name = String::new();
-        reader.read_line(&mut name)?;
+        turn_eof_into_discriptive(reader.read_line(&mut name), TournamentIOError::EmptyFile)?;
+        // removes \n from name
+        let _ = name.pop();
         
         let mut round_number = [0_u8; 2];
         reader.read_exact(&mut round_number)?;
@@ -170,6 +173,18 @@ impl Tournament {
     }
 }
 
+fn turn_eof_into_discriptive<T>(err: std::io::Result<T>, wanted: TournamentIOError) -> Result<T, TournamentIOError> {
+    match err {
+        Err(e) => {
+            match e.kind() {
+                std::io::ErrorKind::UnexpectedEof => Err(wanted),
+                _ => Err(e.into()),
+            }
+        },
+        Ok(v) => Ok(v),
+    }
+}
+
 #[derive(Debug)]
 pub enum TournamentError {
     RoundAlreadyStarted,
@@ -197,6 +212,7 @@ pub enum TournamentIOError {
     MissingNewLineSeperator(usize),
     PlayerHasTooManyRounds(u16, u16),
     InvalidResultFound(u8),
+    EmptyFile,
 }
 
 impl From<std::io::Error> for TournamentIOError {
@@ -212,6 +228,7 @@ impl Display for TournamentIOError {
             Self::MissingNewLineSeperator(pos) => write!(f, "expected newline at byte position: {}", pos),
             Self::PlayerHasTooManyRounds(expected, found) => write!(f, "player has played {} rounds expected {}", found, expected),
             Self::InvalidResultFound(err_res) => write!(f, "found {} in result value should be 0,1,2", err_res),
+            Self::EmptyFile => write!(f, "was given an empty file"),
         }
     }
 }
@@ -229,5 +246,21 @@ mod tests {
     #[test]
     fn two_plus_two() {
         assert_eq!(2+2,4);
+    }
+
+    #[test]
+    fn just_read_name() {
+        let tournament = Tournament::read_from_file("test-files/name_bare_min.sts").unwrap();
+        let test_tournmanet = Tournament::new("My Name".to_string(), Vec::new());
+        assert_eq!(tournament, test_tournmanet);
+    }
+
+    #[test]
+    fn empty_file() {
+        let tournament_error = match Tournament::read_from_file("test-files/empty") {
+            Err(TournamentIOError::Io(e)) => e.kind(),
+            _ => panic!("UnexpectedEof Error"),
+        };
+        assert_eq!(tournament_error, std::io::ErrorKind::UnexpectedEof);
     }
 }
