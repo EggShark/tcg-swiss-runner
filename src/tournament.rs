@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 use std::fs::File;
 use std::path::Path;
 use std::io::{self, BufRead, BufReader, BufWriter, Read, Write};
@@ -110,7 +110,9 @@ impl Tournament {
         let mut name = String::new();
         turn_eof_into_discriptive(reader.read_line(&mut name), TournamentIOError::EmptyFile)?;
         // removes \n from name
-        let _ = name.pop();
+        if name.pop().is_none() {
+            return Err(TournamentIOError::EmptyFile);
+        }
         
         let mut round_number = [0_u8; 2];
         reader.read_exact(&mut round_number)?;
@@ -173,7 +175,7 @@ impl Tournament {
     }
 }
 
-fn turn_eof_into_discriptive<T>(err: std::io::Result<T>, wanted: TournamentIOError) -> Result<T, TournamentIOError> {
+fn turn_eof_into_discriptive<>(err: std::io::Result<T>, wanted: TournamentIOError) -> Result<T, TournamentIOError> {
     match err {
         Err(e) => {
             match e.kind() {
@@ -258,9 +260,10 @@ mod tests {
     #[test]
     fn empty_file() {
         let tournament_error = match Tournament::read_from_file("test-files/empty") {
-            Err(TournamentIOError::Io(e)) => e.kind(),
-            _ => panic!("UnexpectedEof Error"),
+            Err(e) => e,
+            Ok(_) => unreachable!()
         };
-        assert_eq!(tournament_error, std::io::ErrorKind::UnexpectedEof);
+        dbg!(&tournament_error);
+        assert!(matches!(tournament_error, TournamentIOError::EmptyFile))
     }
 }
