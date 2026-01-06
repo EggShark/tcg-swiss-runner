@@ -1,13 +1,13 @@
 use std::fmt::{Debug, Display};
 use std::fs::File;
 use std::path::Path;
-use std::io::{self, BufRead, BufReader, BufWriter, Read, Write};
+use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 use std::error::Error;
 
 
 use crate::swiss::{generate_pairings, Outcome};
-use crate::SCORING;
 use crate::{player::Player, swiss::Pairing};
+use crate::DEFUALT_SCORING;
 
 #[derive(Debug, PartialEq)]
 pub struct Tournament {
@@ -32,7 +32,7 @@ impl Tournament {
             return Err(TournamentError::RoundAlreadyStarted);
         }
 
-        self.pairings = generate_pairings(&mut self.players, SCORING);
+        self.pairings = generate_pairings(&mut self.players, DEFUALT_SCORING);
 
         Ok(())
     }
@@ -175,7 +175,7 @@ impl Tournament {
     }
 }
 
-fn turn_eof_into_discriptive<>(err: std::io::Result<T>, wanted: TournamentIOError) -> Result<T, TournamentIOError> {
+fn turn_eof_into_discriptive<T>(err: std::io::Result<T>, wanted: TournamentIOError) -> Result<T, TournamentIOError> {
     match err {
         Err(e) => {
             match e.kind() {
@@ -252,14 +252,14 @@ mod tests {
 
     #[test]
     fn just_read_name() {
-        let tournament = Tournament::read_from_file("test-files/name_bare_min.sts").unwrap();
+        let tournament = Tournament::read_from_file("../test-files/name_bare_min.sts").unwrap();
         let test_tournmanet = Tournament::new("My Name".to_string(), Vec::new());
         assert_eq!(tournament, test_tournmanet);
     }
 
     #[test]
     fn empty_file() {
-        let tournament_error = match Tournament::read_from_file("test-files/empty") {
+        let tournament_error = match Tournament::read_from_file("../test-files/empty") {
             Err(e) => e,
             Ok(_) => unreachable!()
         };

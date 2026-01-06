@@ -1,7 +1,6 @@
-[package]
-name = "pokemon-tcg-runner"
-version = "0.1.0"
-edition = "2024"
+[workspace]
 
-[dependencies]
-rand = "0.9.2"
+members = [
+  "tournament-core",
+  "tournament-gui",
+]
