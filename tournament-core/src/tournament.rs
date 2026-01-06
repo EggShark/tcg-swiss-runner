@@ -115,21 +115,25 @@ impl Tournament {
         }
         
         let mut round_number = [0_u8; 2];
-        reader.read_exact(&mut round_number)?;
+        turn_eof_into_discriptive(reader.read_exact(&mut round_number), TournamentIOError::MissingRoundNumber)?;
         let round_number = u16::from_le_bytes(round_number);
         
         let mut number_of_players = [0_u8; 2];
-        reader.read_exact(&mut number_of_players)?;
+        turn_eof_into_discriptive(reader.read_exact(&mut number_of_players), TournamentIOError::MissingPlayerNumber)?;
         let number_of_players = u16::from_le_bytes(number_of_players);
 
         let mut players: Vec<Player> = Vec::new();
         for _ in 0..number_of_players {
             let mut player_name = String::new();
             reader.read_line(&mut player_name)?;
+            if player_name.pop().is_none() {
+                panic!("WERE ALL GONNA CRASH");
+            }
 
             let mut player_number = [0_u8; 2];
             reader.read_exact(&mut player_number)?;
             let player_number = u16::from_le_bytes(player_number);
+            dbg!(player_number);
 
             let mut matches = Vec::new();
             let mut wins = 0;
@@ -215,6 +219,8 @@ pub enum TournamentIOError {
     PlayerHasTooManyRounds(u16, u16),
     InvalidResultFound(u8),
     EmptyFile,
+    MissingRoundNumber,
+    MissingPlayerNumber,
 }
 
 impl From<std::io::Error> for TournamentIOError {
@@ -231,6 +237,8 @@ impl Display for TournamentIOError {
             Self::PlayerHasTooManyRounds(expected, found) => write!(f, "player has played {} rounds expected {}", found, expected),
             Self::InvalidResultFound(err_res) => write!(f, "found {} in result value should be 0,1,2", err_res),
             Self::EmptyFile => write!(f, "was given an empty file"),
+            Self::MissingRoundNumber => write!(f, "Expected to find 16 bit round number"),
+            Self::MissingPlayerNumber => write!(f, "Expected to find 16 bit number of players")
         }
     }
 }
@@ -258,6 +266,16 @@ mod tests {
     }
 
     #[test]
+    fn valid_no_played_rounds() {
+        dbg!("HIII");
+        let tournament = Tournament::read_from_file("../test-files/valid_no_rounds.sts").unwrap();
+        let players = generate_players(4);
+        let test_tournmanet = Tournament::new("Tournament name".to_string(), players);
+        assert_eq!(tournament, test_tournmanet);
+    }
+
+
+    #[test]
     fn empty_file() {
         let tournament_error = match Tournament::read_from_file("../test-files/empty") {
             Err(e) => e,
@@ -265,5 +283,25 @@ mod tests {
         };
         dbg!(&tournament_error);
         assert!(matches!(tournament_error, TournamentIOError::EmptyFile))
+    }
+
+    #[test]
+    fn no_round_number() {
+        let tournament_error = match Tournament::read_from_file("../test-files/missing_round_numbers.sts") {
+            Err(e) => e,
+            Ok(_) => unreachable!()
+        };
+
+        assert!(matches!(tournament_error, TournamentIOError::MissingRoundNumber));
+    }
+
+    #[test]
+    fn no_player_numbers() {
+        let tournament_error = match Tournament::read_from_file("../test-files/no_player_numbers.sts") {
+            Err(e) => e,
+            Ok(_) => unreachable!()
+        };
+
+        assert!(matches!(tournament_error, TournamentIOError::MissingPlayerNumber));
     }
 }
