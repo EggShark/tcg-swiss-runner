@@ -1,4 +1,5 @@
-use iced::widget::{button, column, row};
+use iced::widget::{button, column, container, row};
+use tournament_core::player::Player;
 
 fn main() {
     println!("Hello World!");
@@ -9,15 +10,16 @@ type Message = TournamentEvent;
 
 #[derive(Default)]
 struct TournamentApp {
-    tab: Tabs,
+    active_tab: Tabs,
+    players: Vec<Player>
 }
 
 impl TournamentApp {
     fn update(&mut self, message: Message) {
         match message {
-            TournamentEvent::MatchesTab => self.tab = Tabs::Matches,
-            TournamentEvent::PlayersTab => self.tab = Tabs::Players,
-            TournamentEvent::OtherStuffTab => self.tab = Tabs::OtherStuff,
+            TournamentEvent::MatchesTab => self.active_tab = Tabs::Matches,
+            TournamentEvent::PlayersTab => self.active_tab = Tabs::Players,
+            TournamentEvent::OtherStuffTab => self.active_tab = Tabs::OtherStuff,
             _ => println!("unhandled :3"),
         } 
     }
@@ -29,12 +31,20 @@ impl TournamentApp {
                 button("Players").on_press(TournamentEvent::PlayersTab),
                 button("OtherStuff").on_press(TournamentEvent::OtherStuffTab),
             ],
-            match self.tab {
-                Tabs::Matches => "Matches Tab!",
-                Tabs::Players => "Player Tab!",
-                Tabs::OtherStuff => "Other Stuff!",
+            match self.active_tab {
+                Tabs::Matches => "Matches Tab!".into(),
+                Tabs::Players => self.player_tab_view(),
+                Tabs::OtherStuff => "Other Stuff!".into(),
             },
             "I am top",
+        ].into()
+    }
+
+    fn player_tab_view(&self) -> iced::Element<'_, Message> {
+        // grid of Players
+        column![
+            column(self.players.iter().map(|p| p.get_name().into())),
+            button("Add Player"),
         ].into()
     }
 }

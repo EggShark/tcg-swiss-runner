@@ -2832,6 +2832,7 @@ name = "tournament-gui"
 version = "0.1.0"
 dependencies = [
  "iced",
+ "tournament-core",
 ]
 
 [[package]]
