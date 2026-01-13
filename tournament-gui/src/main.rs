@@ -1,4 +1,4 @@
-use iced::widget::{button, column, container, row};
+use iced::widget::{button, column, text, row, text_input, container};
 use tournament_core::player::Player;
 
 fn main() {
@@ -11,7 +11,10 @@ type Message = TournamentEvent;
 #[derive(Default)]
 struct TournamentApp {
     active_tab: Tabs,
-    players: Vec<Player>
+    players: Vec<Player>,
+    input_player_name: String,
+    input_player_id: String,
+    input_player_error: String,
 }
 
 impl TournamentApp {
@@ -20,6 +23,9 @@ impl TournamentApp {
             TournamentEvent::MatchesTab => self.active_tab = Tabs::Matches,
             TournamentEvent::PlayersTab => self.active_tab = Tabs::Players,
             TournamentEvent::OtherStuffTab => self.active_tab = Tabs::OtherStuff,
+            TournamentEvent::PlayerIdUpdate(v) => self.input_player_id = v,
+            TournamentEvent::PlayerNameUpdate(v) => self.input_player_name = v,
+            TournamentEvent::AddPlayer => self.add_player(),
             _ => println!("unhandled :3"),
         } 
     }
@@ -44,8 +50,31 @@ impl TournamentApp {
         // grid of Players
         column![
             column(self.players.iter().map(|p| p.get_name().into())),
-            button("Add Player"),
+            row![
+                text_input("Player Name", &self.input_player_name).on_input(TournamentEvent::PlayerNameUpdate),
+                text_input("player_id", &self.input_player_id).on_input(TournamentEvent::PlayerIdUpdate),
+            ],
+            (!self.input_player_error.is_empty()).then(|| text(&self.input_player_error)),
+            button("Add Player").on_press(TournamentEvent::AddPlayer),
         ].into()
+    }
+
+    fn add_player(&mut self) {
+        let player_id = self.input_player_id.parse::<u16>();
+        match player_id {
+            Ok(_) => {},
+            Err(_e) => {
+                self.input_player_error = "Invalid Player ID entered".to_string(); //TODO make more
+                                                                                   //descripitive
+                return;
+            }
+        }
+        let mut player_name = String::new();
+        std::mem::swap(&mut player_name, &mut self.input_player_name);
+        self.input_player_id.clear();
+        let player = Player::new(player_name, player_id.unwrap());
+        self.players.push(player);
+        self.input_player_error.clear();
     }
 }
 
@@ -54,6 +83,9 @@ enum TournamentEvent {
     MatchesTab,
     PlayersTab,
     OtherStuffTab,
+    PlayerNameUpdate(String),
+    PlayerIdUpdate(String),
+    AddPlayer,
     NonSense
 }
 
