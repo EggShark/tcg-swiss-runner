@@ -1,5 +1,5 @@
-use iced::{Length, widget::{button, column, container, row, text, text_input}};
-use tournament_core::player::Player;
+use iced::{Length, widget::{button, column, row, text, text_input}};
+use tournament_core::{player::Player, tournament::Tournament};
 
 fn main() {
     println!("Hello World!");
@@ -11,7 +11,7 @@ type Message = TournamentEvent;
 #[derive(Default)]
 struct TournamentApp {
     active_tab: Tabs,
-    players: Vec<Player>,
+    tournament: Tournament,
     input_player_name: String,
     input_player_id: String,
     input_player_error: String,
@@ -49,13 +49,13 @@ impl TournamentApp {
     fn player_tab_view(&self) -> iced::Element<'_, Message> {
         // grid of Players
         column![
-            (!self.players.is_empty())
+            (!self.tournament.get_players().is_empty())
                 .then(|| row![
                     text("Name").width(Length::FillPortion(1)),
                     text("Id").width(Length::FillPortion(1)),
                     text("W-L-T").width(Length::FillPortion(1)),
                 ]),
-            column(self.players.iter().map(|p| player_view(p))),
+            column(self.tournament.get_players().iter().map(|p| player_view(p))),
             row![
                 text_input("Player Name", &self.input_player_name).on_input(TournamentEvent::PlayerNameUpdate),
                 text_input("player_id", &self.input_player_id).on_input(TournamentEvent::PlayerIdUpdate),
@@ -79,7 +79,7 @@ impl TournamentApp {
         std::mem::swap(&mut player_name, &mut self.input_player_name);
         self.input_player_id.clear();
         let player = Player::new(player_name, player_id.unwrap());
-        self.players.push(player);
+        self.tournament.add_player(player);
         self.input_player_error.clear();
     }
 }
