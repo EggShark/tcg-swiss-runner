@@ -1,4 +1,4 @@
-use iced::widget::{button, column, text, row, text_input, container};
+use iced::{Length, widget::{button, column, container, row, text, text_input}};
 use tournament_core::player::Player;
 
 fn main() {
@@ -49,7 +49,13 @@ impl TournamentApp {
     fn player_tab_view(&self) -> iced::Element<'_, Message> {
         // grid of Players
         column![
-            column(self.players.iter().map(|p| p.get_name().into())),
+            (!self.players.is_empty())
+                .then(|| row![
+                    text("Name").width(Length::FillPortion(1)),
+                    text("Id").width(Length::FillPortion(1)),
+                    text("W-L-T").width(Length::FillPortion(1)),
+                ]),
+            column(self.players.iter().map(|p| player_view(p))),
             row![
                 text_input("Player Name", &self.input_player_name).on_input(TournamentEvent::PlayerNameUpdate),
                 text_input("player_id", &self.input_player_id).on_input(TournamentEvent::PlayerIdUpdate),
@@ -76,6 +82,17 @@ impl TournamentApp {
         self.players.push(player);
         self.input_player_error.clear();
     }
+}
+
+fn player_view(player: &Player) -> iced::Element<'_, Message> {
+    row![
+        text(player.get_name()).width(Length::FillPortion(1)),
+        text(player.get_number()).width(Length::FillPortion(1)),
+        {
+            let (wins, ties, losses) =  player.get_record();
+            text(format!("{}-{}-{}", wins, ties, losses)).width(Length::FillPortion(1))
+        },
+    ].into()
 }
 
 #[derive(Clone)]
