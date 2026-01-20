@@ -9,7 +9,7 @@ use crate::swiss::{generate_pairings, Outcome};
 use crate::{player::Player, swiss::Pairing};
 use crate::DEFUALT_SCORING;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct Tournament {
     round_number: u16,
     players: Vec<Player>,
@@ -25,6 +25,18 @@ impl Tournament {
             pairings: Vec::new(),
             name,
         }
+    }
+
+    pub fn add_player(&mut self, mut player: Player) {
+        if self.round_number > 0 {
+            (0..self.round_number).for_each(|_| player.add_opponent(0, Outcome::Loss));
+        }
+
+        self.players.push(player);
+    }
+
+    pub fn get_players(&self) -> &[Player] {
+        &self.players
     }
 
     pub fn start_round(&mut self) -> Result<(), TournamentError> {

@@ -54,10 +54,8 @@ impl Pairing {
             return (self.p1, self.p2);
         }
 
-        self.p1.mark_result(self.winner.unwrap());
         if let Some(p2) = &mut self.p2 {
             self.p1.add_opponent(p2.get_number(), self.winner.unwrap());
-            p2.mark_result(!self.winner.unwrap());
             p2.add_opponent(self.p1.get_number(), !self.winner.unwrap());
         } else {
             self.p1.add_opponent(BYE_PLAYER_NUMBER, self.winner.unwrap());

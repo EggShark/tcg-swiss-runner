@@ -41,14 +41,6 @@ impl Player {
         (self.wins, self.losses, self.ties)
     }
 
-    pub fn mark_result(&mut self, outcome: Outcome) {
-        match outcome {
-            Outcome::Win => self.wins += 1,
-            Outcome::Loss => self.losses += 1,
-            Outcome::Tie => self.ties += 1,
-        }
-    }
-
     pub fn caluculate_match_points(&self, score_config: ScoreConfig) -> u8 {
         (self.wins * score_config.win) + (self.losses * score_config.loss) + (self.ties * score_config.tie)
     }
@@ -70,6 +62,11 @@ impl Player {
     }
 
     pub fn add_opponent(&mut self, op_number: u16, outcome: Outcome) {
+        match outcome {
+            Outcome::Win => self.wins += 1,
+            Outcome::Loss => self.losses += 1,
+            Outcome::Tie => self.ties += 1,
+        }
         self.opponents.push((op_number, outcome));
     }
 
