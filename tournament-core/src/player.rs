@@ -72,4 +72,9 @@ impl Player {
     pub fn add_opponent(&mut self, op_number: u16, outcome: Outcome) {
         self.opponents.push((op_number, outcome));
     }
+
+    /// (wins, losses, ties)
+    pub fn get_record(&self) -> (u8, u8, u8) {
+        (self.wins, self.losses, self.ties)
+    }
 }
