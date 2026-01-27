@@ -11,8 +11,6 @@ fn main() {
         .run();
 }
 
-type Message = TournamentEvent;
-
 #[derive(Default)]
 struct TournamentApp {
     active_tab: Tabs,
@@ -28,7 +26,7 @@ impl TournamentApp {
     }
 
 
-    fn update(&mut self, message: Message) -> Task<Message> {
+    fn update(&mut self, message: TournamentEvent) -> Task<TournamentEvent> {
         let mut final_task = Task::none();
         match message {
             TournamentEvent::MatchesTab => self.active_tab = Tabs::Matches,
@@ -45,7 +43,7 @@ impl TournamentApp {
         final_task
     }
 
-    fn view(&self) -> iced::Element<'_, Message> {
+    fn view(&self) -> iced::Element<'_, TournamentEvent> {
         column![
             row![
                 button("Matches").on_press(TournamentEvent::MatchesTab),
@@ -61,7 +59,7 @@ impl TournamentApp {
         ].into()
     }
 
-    fn subscription(&self) -> Subscription<Message> {
+    fn subscription(&self) -> Subscription<TournamentEvent> {
         keyboard::listen().map(|e| {
             match e {
                 KEvent::KeyPressed {
@@ -78,7 +76,7 @@ impl TournamentApp {
         })
     }
 
-    fn player_tab_view(&self) -> iced::Element<'_, Message> {
+    fn player_tab_view(&self) -> iced::Element<'_, TournamentEvent> {
         // grid of Players
         column![
             (!self.tournament.get_players().is_empty())
@@ -116,7 +114,7 @@ impl TournamentApp {
     }
 }
 
-fn player_view(player: &Player) -> iced::Element<'_, Message> {
+fn player_view(player: &Player) -> iced::Element<'_, TournamentEvent> {
     row![
         text(player.get_name()).width(Length::FillPortion(1)),
         text(player.get_number()).width(Length::FillPortion(1)),
