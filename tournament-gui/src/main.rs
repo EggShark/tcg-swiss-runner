@@ -1,9 +1,14 @@
-use iced::{Length, widget::{button, column, row, text, text_input}};
+use iced::keyboard::{Event as KEvent, Modifiers};
+use iced::widget::operation::{focus_next, focus_previous};
+use iced::{keyboard, Length, Subscription, Task};
+use iced::widget::{button, column, row, text, text_input};
 use tournament_core::{player::Player, tournament::Tournament};
 
 fn main() {
     println!("Hello World!");
-    let _ = iced::run(TournamentApp::update, TournamentApp::view);
+    let _ = iced::application(TournamentApp::new, TournamentApp::update, TournamentApp::view)
+        .subscription(TournamentApp::subscription)
+        .run();
 }
 
 type Message = TournamentEvent;
@@ -18,7 +23,13 @@ struct TournamentApp {
 }
 
 impl TournamentApp {
-    fn update(&mut self, message: Message) {
+    fn new() -> Self {
+        Self::default()
+    }
+
+
+    fn update(&mut self, message: Message) -> Task<Message> {
+        let mut final_task = Task::none();
         match message {
             TournamentEvent::MatchesTab => self.active_tab = Tabs::Matches,
             TournamentEvent::PlayersTab => self.active_tab = Tabs::Players,
@@ -26,8 +37,12 @@ impl TournamentApp {
             TournamentEvent::PlayerIdUpdate(v) => self.input_player_id = v,
             TournamentEvent::PlayerNameUpdate(v) => self.input_player_name = v,
             TournamentEvent::AddPlayer => self.add_player(),
+            TournamentEvent::TabPress => final_task = focus_next(),
+            TournamentEvent::ShiftTabPress => final_task = focus_previous(),
             _ => println!("unhandled :3"),
-        } 
+        }
+
+        final_task
     }
 
     fn view(&self) -> iced::Element<'_, Message> {
@@ -44,6 +59,23 @@ impl TournamentApp {
             },
             "I am top",
         ].into()
+    }
+
+    fn subscription(&self) -> Subscription<Message> {
+        keyboard::listen().map(|e| {
+            match e {
+                KEvent::KeyPressed {
+                    key: keyboard::Key::Named(keyboard::key::Named::Tab),
+                    modifiers,
+                    ..
+                } => if modifiers.contains(Modifiers::SHIFT) {
+                    TournamentEvent::ShiftTabPress
+                } else {
+                    TournamentEvent::TabPress
+                }
+                _ => TournamentEvent::NonSense
+            }
+        })
     }
 
     fn player_tab_view(&self) -> iced::Element<'_, Message> {
@@ -69,9 +101,9 @@ impl TournamentApp {
         let player_id = self.input_player_id.parse::<u16>();
         match player_id {
             Ok(_) => {},
-            Err(_e) => {
-                self.input_player_error = "Invalid Player ID entered".to_string(); //TODO make more
-                                                                                   //descripitive
+            Err(_) => {
+                self.input_player_error = "Error adding player".to_string(); //TODO make more
+                                                                             //descriptive
                 return;
             }
         }
@@ -103,6 +135,8 @@ enum TournamentEvent {
     PlayerNameUpdate(String),
     PlayerIdUpdate(String),
     AddPlayer,
+    TabPress,
+    ShiftTabPress,
     NonSense
 }
 
