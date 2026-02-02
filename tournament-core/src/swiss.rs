@@ -25,6 +25,7 @@ impl std::ops::Not for Outcome {
     }
 }
 
+// Add multi round match support i.e win win -> Winner
 #[derive(Debug, PartialEq)]
 pub struct Pairing {
     p1: Player,
@@ -76,7 +77,7 @@ impl Pairing {
         }
     }
 
-    fn get_players(&self) -> (&Player, Option<&Player>) {
+    pub fn get_players(&self) -> (&Player, Option<&Player>) {
         (&self.p1, self.p2.as_ref())
     }
 }
