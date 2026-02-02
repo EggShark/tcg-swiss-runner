@@ -2,6 +2,7 @@ use iced::keyboard::{Event as KEvent, Modifiers};
 use iced::widget::operation::{focus_next, focus_previous};
 use iced::{keyboard, Length, Subscription, Task};
 use iced::widget::{button, column, row, text, text_input};
+use tournament_core::swiss::Pairing;
 use tournament_core::{player::Player, tournament::Tournament};
 
 fn main() {
@@ -14,6 +15,7 @@ fn main() {
 #[derive(Default)]
 struct TournamentApp {
     active_tab: Tabs,
+    state: TournamentState,
     tournament: Tournament,
     input_player_name: String,
     input_player_id: String,
@@ -37,6 +39,9 @@ impl TournamentApp {
             TournamentEvent::AddPlayer => self.add_player(),
             TournamentEvent::TabPress => final_task = focus_next(),
             TournamentEvent::ShiftTabPress => final_task = focus_previous(),
+            TournamentEvent::MoveTournamentAlong(TournamentState::DuringRound) => {
+                self.tournament.start_round().unwrap();
+            }
             _ => println!("unhandled :3"),
         }
 
@@ -51,7 +56,7 @@ impl TournamentApp {
                 button("OtherStuff").on_press(TournamentEvent::OtherStuffTab),
             ],
             match self.active_tab {
-                Tabs::Matches => "Matches Tab!".into(),
+                Tabs::Matches => self.matches_tab(),
                 Tabs::Players => self.player_tab_view(),
                 Tabs::OtherStuff => "Other Stuff!".into(),
             },
@@ -97,20 +102,33 @@ impl TournamentApp {
 
     fn add_player(&mut self) {
         let player_id = self.input_player_id.parse::<u16>();
-        match player_id {
-            Ok(_) => {},
+        let player_id = match player_id {
+            Ok(id) => id,
             Err(_) => {
-                self.input_player_error = "Error adding player".to_string(); //TODO make more
-                                                                             //descriptive
+                self.input_player_error = "Player ID must be a number".to_string();
                 return;
             }
+        };
+
+        if let Some(id) = self.tournament.get_players().iter().map(|p| p.get_number()).find(|&id| id == player_id) {
+            self.input_player_error = format!("Player ID of {} is not unique", id);
+            return;
         }
+
         let mut player_name = String::new();
         std::mem::swap(&mut player_name, &mut self.input_player_name);
         self.input_player_id.clear();
-        let player = Player::new(player_name, player_id.unwrap());
+        let player = Player::new(player_name, player_id);
         self.tournament.add_player(player);
         self.input_player_error.clear();
+    }
+    
+    fn matches_tab(&self) -> iced::Element<'_, TournamentEvent> {
+        column![
+            button("Start Tournament").on_press(TournamentEvent::MoveTournamentAlong(TournamentState::DuringRound)),
+            row(self.tournament.get_pairings().iter().map(|p| pairing_display(p))).spacing(10),
+            // each paring
+        ].into()     
     }
 }
 
@@ -125,6 +143,17 @@ fn player_view(player: &Player) -> iced::Element<'_, TournamentEvent> {
     ].into()
 }
 
+fn pairing_display(pairing: &Pairing) -> iced::Element<'_, TournamentEvent> {
+    let (p1, p2) = pairing.get_players();
+    column![
+        row![text(p1.get_name()), button("Winner")],
+        match p2 {
+            Some(p) => row![text(p.get_name()), button("Winner")],
+            None => row![text("bye")]
+        }
+    ].into()
+}
+
 #[derive(Clone)]
 enum TournamentEvent {
     MatchesTab,
@@ -132,6 +161,7 @@ enum TournamentEvent {
     OtherStuffTab,
     PlayerNameUpdate(String),
     PlayerIdUpdate(String),
+    MoveTournamentAlong(TournamentState),
     AddPlayer,
     TabPress,
     ShiftTabPress,
@@ -144,4 +174,13 @@ enum Tabs {
     Matches,
     Players,
     OtherStuff,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+enum TournamentState {
+    #[default]
+    PreTournament,
+    DuringRound,
+    BetweenRounds,
+    Fin,
 }
