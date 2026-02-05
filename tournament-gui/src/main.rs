@@ -126,8 +126,18 @@ impl TournamentApp {
     fn matches_tab(&self) -> iced::Element<'_, TournamentEvent> {
         column![
             button("Start Tournament").on_press(TournamentEvent::MoveTournamentAlong(TournamentState::DuringRound)),
-            row(self.tournament.get_pairings().iter().map(|p| pairing_display(p))).spacing(10),
-            // each paring
+            column(
+                self
+                    .tournament
+                    .get_pairings()
+                    .chunks(2)
+                    .enumerate()
+                    .map(|(idx, c)| match c {
+                        [a, b] => row![pairing_display(a, idx), pairing_display(b, idx)].into(),
+                        [a] => row![pairing_display(a, idx), row![].width(Length::FillPortion(1))].into(),
+                        _ => unreachable!()
+                    })
+            ),
         ].into()     
     }
 }
@@ -143,15 +153,22 @@ fn player_view(player: &Player) -> iced::Element<'_, TournamentEvent> {
     ].into()
 }
 
-fn pairing_display(pairing: &Pairing) -> iced::Element<'_, TournamentEvent> {
+fn pairing_display(pairing: &Pairing, match_number: usize) -> iced::Element<'_, TournamentEvent> {
     let (p1, p2) = pairing.get_players();
     column![
-        row![text(p1.get_name()), button("Winner")],
+        row![
+            text(p1.get_name()).width(Length::FillPortion(1)),
+            button("Winner").on_press(TournamentEvent::Player1Win(match_number)).width(Length::FillPortion(1))
+        ],
         match p2 {
-            Some(p) => row![text(p.get_name()), button("Winner")],
+            Some(p) => row![
+                text(p.get_name()).width(Length::FillPortion(1)),
+                button("Winner").on_press(TournamentEvent::Player2Win(match_number)).width(Length::FillPortion(1))
+            ],
             None => row![text("bye")]
         }
-    ].into()
+    ].padding(20)
+    .into()
 }
 
 #[derive(Clone)]
@@ -162,6 +179,9 @@ enum TournamentEvent {
     PlayerNameUpdate(String),
     PlayerIdUpdate(String),
     MoveTournamentAlong(TournamentState),
+    /// used to declare winners where usize is the match number
+    Player1Win(usize),
+    Player2Win(usize)
     AddPlayer,
     TabPress,
     ShiftTabPress,
