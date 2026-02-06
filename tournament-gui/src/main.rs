@@ -1,8 +1,10 @@
+mod update;
+
 use iced::keyboard::{Event as KEvent, Modifiers};
 use iced::widget::operation::{focus_next, focus_previous};
 use iced::{keyboard, Length, Subscription, Task};
 use iced::widget::{button, column, row, text, text_input};
-use tournament_core::swiss::Pairing;
+use tournament_core::swiss::{Outcome, Pairing};
 use tournament_core::{player::Player, tournament::Tournament};
 
 fn main() {
@@ -13,7 +15,7 @@ fn main() {
 }
 
 #[derive(Default)]
-struct TournamentApp {
+pub(crate) struct TournamentApp {
     active_tab: Tabs,
     state: TournamentState,
     tournament: Tournament,
@@ -25,27 +27,6 @@ struct TournamentApp {
 impl TournamentApp {
     fn new() -> Self {
         Self::default()
-    }
-
-
-    fn update(&mut self, message: TournamentEvent) -> Task<TournamentEvent> {
-        let mut final_task = Task::none();
-        match message {
-            TournamentEvent::MatchesTab => self.active_tab = Tabs::Matches,
-            TournamentEvent::PlayersTab => self.active_tab = Tabs::Players,
-            TournamentEvent::OtherStuffTab => self.active_tab = Tabs::OtherStuff,
-            TournamentEvent::PlayerIdUpdate(v) => self.input_player_id = v,
-            TournamentEvent::PlayerNameUpdate(v) => self.input_player_name = v,
-            TournamentEvent::AddPlayer => self.add_player(),
-            TournamentEvent::TabPress => final_task = focus_next(),
-            TournamentEvent::ShiftTabPress => final_task = focus_previous(),
-            TournamentEvent::MoveTournamentAlong(TournamentState::DuringRound) => {
-                self.tournament.start_round().unwrap();
-            }
-            _ => println!("unhandled :3"),
-        }
-
-        final_task
     }
 
     fn view(&self) -> iced::Element<'_, TournamentEvent> {
@@ -99,29 +80,6 @@ impl TournamentApp {
             button("Add Player").on_press(TournamentEvent::AddPlayer),
         ].into()
     }
-
-    fn add_player(&mut self) {
-        let player_id = self.input_player_id.parse::<u16>();
-        let player_id = match player_id {
-            Ok(id) => id,
-            Err(_) => {
-                self.input_player_error = "Player ID must be a number".to_string();
-                return;
-            }
-        };
-
-        if let Some(id) = self.tournament.get_players().iter().map(|p| p.get_number()).find(|&id| id == player_id) {
-            self.input_player_error = format!("Player ID of {} is not unique", id);
-            return;
-        }
-
-        let mut player_name = String::new();
-        std::mem::swap(&mut player_name, &mut self.input_player_name);
-        self.input_player_id.clear();
-        let player = Player::new(player_name, player_id);
-        self.tournament.add_player(player);
-        self.input_player_error.clear();
-    }
     
     fn matches_tab(&self) -> iced::Element<'_, TournamentEvent> {
         column![
@@ -133,8 +91,8 @@ impl TournamentApp {
                     .chunks(2)
                     .enumerate()
                     .map(|(idx, c)| match c {
-                        [a, b] => row![pairing_display(a, idx), pairing_display(b, idx)].into(),
-                        [a] => row![pairing_display(a, idx), row![].width(Length::FillPortion(1))].into(),
+                        [a, b] => row![pairing_display(a, idx * 2), pairing_display(b, idx*2 + 1)].into(),
+                        [a] => row![pairing_display(a, idx*2), row![].width(Length::FillPortion(1))].into(),
                         _ => unreachable!()
                     })
             ),
@@ -158,12 +116,12 @@ fn pairing_display(pairing: &Pairing, match_number: usize) -> iced::Element<'_, 
     column![
         row![
             text(p1.get_name()).width(Length::FillPortion(1)),
-            button("Winner").on_press(TournamentEvent::Player1Win(match_number)).width(Length::FillPortion(1))
+            button("Winner").on_press(TournamentEvent::DeclareMatch(match_number, Outcome::Win)).width(Length::FillPortion(1))
         ],
         match p2 {
             Some(p) => row![
                 text(p.get_name()).width(Length::FillPortion(1)),
-                button("Winner").on_press(TournamentEvent::Player2Win(match_number)).width(Length::FillPortion(1))
+                button("Winner").on_press(TournamentEvent::DeclareMatch(match_number, Outcome::Loss)).width(Length::FillPortion(1))
             ],
             None => row![text("bye")]
         }
@@ -172,7 +130,7 @@ fn pairing_display(pairing: &Pairing, match_number: usize) -> iced::Element<'_, 
 }
 
 #[derive(Clone)]
-enum TournamentEvent {
+pub(crate) enum TournamentEvent {
     MatchesTab,
     PlayersTab,
     OtherStuffTab,
@@ -180,8 +138,7 @@ enum TournamentEvent {
     PlayerIdUpdate(String),
     MoveTournamentAlong(TournamentState),
     /// used to declare winners where usize is the match number
-    Player1Win(usize),
-    Player2Win(usize)
+    DeclareMatch(usize, Outcome),
     AddPlayer,
     TabPress,
     ShiftTabPress,
@@ -189,7 +146,7 @@ enum TournamentEvent {
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-enum Tabs {
+pub(crate) enum Tabs {
     #[default]
     Matches,
     Players,
@@ -197,7 +154,7 @@ enum Tabs {
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-enum TournamentState {
+pub(crate) enum TournamentState {
     #[default]
     PreTournament,
     DuringRound,
