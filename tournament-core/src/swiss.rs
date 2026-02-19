@@ -42,6 +42,10 @@ impl Pairing {
         }
     }
 
+    pub fn get_outcome(&self) -> Option<Outcome> {
+        self.winner
+    }
+
     pub fn give_outcome(&mut self, outcome: Outcome) {
         self.winner = Some(outcome);
     }
