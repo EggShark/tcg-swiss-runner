@@ -5,8 +5,8 @@ use iced::keyboard::{Event as KEvent, Modifiers};
 use iced::theme::palette;
 use iced::widget::button::{Status, Style};
 use iced::widget::operation::{focus_next, focus_previous};
-use iced::{keyboard, Background, Color, Length, Subscription, Task, Theme};
-use iced::widget::{button, column, row, text, text_input};
+use iced::{keyboard, Background, Color, Element, Length, Subscription, Task, Theme};
+use iced::widget::{button, center, column, opaque, row, stack, text, text_input};
 use tournament_core::swiss::{Outcome, Pairing};
 use tournament_core::{player::Player, tournament::Tournament};
 
@@ -25,6 +25,7 @@ pub(crate) struct TournamentApp {
     input_player_name: String,
     input_player_id: String,
     input_player_error: String,
+    dialog_state: Option<DialogStates>
 }
 
 impl TournamentApp {
@@ -33,18 +34,21 @@ impl TournamentApp {
     }
 
     fn view(&self) -> iced::Element<'_, TournamentEvent> {
-        column![
-            row![
-                button("Matches").on_press(TournamentEvent::MatchesTab),
-                button("Players").on_press(TournamentEvent::PlayersTab),
-                button("OtherStuff").on_press(TournamentEvent::OtherStuffTab),
+        stack![
+            column![
+                row![
+                    button("Matches").on_press(TournamentEvent::MatchesTab),
+                    button("Players").on_press(TournamentEvent::PlayersTab),
+                    button("OtherStuff").on_press(TournamentEvent::OtherStuffTab),
+                ],
+                match self.active_tab {
+                    Tabs::Matches => self.matches_tab(),
+                    Tabs::Players => self.player_tab_view(),
+                    Tabs::OtherStuff => "Other Stuff!".into(),
+                },
+                "I am top",
             ],
-            match self.active_tab {
-                Tabs::Matches => self.matches_tab(),
-                Tabs::Players => self.player_tab_view(),
-                Tabs::OtherStuff => "Other Stuff!".into(),
-            },
-            "I am top",
+            self.dialog_view()
         ].into()
     }
 
@@ -101,6 +105,17 @@ impl TournamentApp {
             ),
         ].into()     
     }
+
+    fn dialog_view(&self) -> Option<iced::Element<'_, TournamentEvent>> {
+       let content = match self.dialog_state.as_ref()? {
+           DialogStates::MatchReportState {
+               match_index
+           } => report_dialog(self.tournament.get_pairing(*match_index)),
+           _ => todo!()
+       };
+
+       Some(opaque(center(content)))
+    }
 }
 
 fn player_view(player: &Player) -> iced::Element<'_, TournamentEvent> {
@@ -114,6 +129,23 @@ fn player_view(player: &Player) -> iced::Element<'_, TournamentEvent> {
     ].into()
 }
 
+fn report_dialog(pairing: &Pairing) -> iced::Element<'_, TournamentEvent> {
+    let (p1, p2) = pairing.get_players();
+    column![
+        text(p1.get_name()),
+        text(p2.map_or("bye", |p| p.get_name())),
+        row![
+            button("P1 wins"),
+            button("P2 wins"),
+            button("Players Tie"),
+        ],
+        row![
+            button("Confirm"),
+            button("Close"),
+        ],
+    ].into()
+}
+
 fn pairing_display(pairing: &Pairing, match_number: usize) -> iced::Element<'_, TournamentEvent> {
     let (p1, p2) = pairing.get_players();
     column![
@@ -121,7 +153,7 @@ fn pairing_display(pairing: &Pairing, match_number: usize) -> iced::Element<'_, 
             text(p1.get_name()).width(Length::FillPortion(1)),
             button("Winner")
                 .style(|t, s| button_style(t, s, pairing.get_outcome(), true))
-                .on_press(TournamentEvent::DeclareMatch(match_number, Outcome::Win))
+                .on_press(TournamentEvent::OpenMatchDialoge(match_number))
                 .width(Length::FillPortion(1))
         ],
         match p2 {
@@ -160,8 +192,9 @@ pub(crate) enum TournamentEvent {
     PlayerNameUpdate(String),
     PlayerIdUpdate(String),
     MoveTournamentAlong(TournamentState),
-        /// used to declare winners where usize is the match number
+    /// used to declare winners where usize is the match number
     DeclareMatch(usize, Outcome),
+    OpenMatchDialoge(usize),
     AddPlayer,
     TabPress,
     ShiftTabPress,
@@ -183,4 +216,16 @@ pub(crate) enum TournamentState {
     DuringRound,
     BetweenRounds,
     Fin,
+}
+
+enum DialogStates {
+    // only usize bc we can get what we need from pairings
+    MatchReportState {
+        match_index: usize
+    },
+    AddPlayer {
+        name: String,
+        id: String,
+        error_box: String,
+    }
 }

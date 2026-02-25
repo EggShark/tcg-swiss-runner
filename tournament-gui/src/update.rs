@@ -17,6 +17,7 @@ impl TournamentApp {
             TournamentEvent::PlayerNameUpdate(v) => self.input_player_name = v,
             TournamentEvent::AddPlayer => self.add_player(),
             TournamentEvent::DeclareMatch(idx, res) => self.tournament.report_match(idx, res).unwrap(),
+            TournamentEvent::OpenMatchDialoge(idx) => self.dialog_state = Some(crate::DialogStates::MatchReportState { match_index: idx }),
             TournamentEvent::TabPress => final_task = focus_next(),
             TournamentEvent::ShiftTabPress => final_task = focus_previous(),
             TournamentEvent::MoveTournamentAlong(TournamentState::DuringRound) => {
