@@ -43,6 +43,10 @@ impl Tournament {
         &self.pairings
     }
 
+    pub fn get_pairing(&self, match_index: usize) -> &Pairing {
+        &self.pairings[match_index]
+    }
+
     pub fn start_round(&mut self) -> Result<(), TournamentError> {
         if self.players.is_empty() {
             return Err(TournamentError::RoundAlreadyStarted);
